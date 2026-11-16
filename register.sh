@@ -33,12 +33,21 @@ cfg_body() {
   else python3 -c 'import json,sys;print(json.dumps(json.load(open(sys.argv[1]))["config"]))' "$1"; fi
 }
 names_list() {
-  if have jq; then jq -r '.[]'
-  else python3 -c 'import json,sys;print("\n".join(json.load(sys.stdin)))'; fi
+  if have jq; then jq -r 'if type == "array" then .[] else empty end'
+  else python3 -c 'import json,sys
+d = json.load(sys.stdin)
+print("\n".join(d if isinstance(d, list) else []))'; fi
 }
 states() {
-  if have jq; then jq -r '[.connector.state] + [.tasks[].state] | join(" ")'
-  else python3 -c 'import json,sys;d=json.load(sys.stdin);print(" ".join([d["connector"]["state"]]+[t["state"] for t in d["tasks"]]))'; fi
+  if have jq; then
+    jq -r '[(.connector.state // "UNKNOWN")] + [(.tasks // [])[].state] | join(" ")'
+  else
+    python3 -c 'import json,sys
+d = json.load(sys.stdin)
+c = (d.get("connector") or {}).get("state", "UNKNOWN")
+t = [x.get("state", "UNKNOWN") for x in (d.get("tasks") or [])]
+print(" ".join([c] + t))'
+  fi
 }
 jget() {  # stdin: JSON коннектора, $1: ключ из .config
   if have jq; then jq -r --arg k "$1" '.config[$k] // empty'
@@ -76,7 +85,7 @@ wait_running() {
   local name="$1" s="" t
   printf '⏳ %-22s ' "$name"
   for ((t=0; t<WAIT_TIMEOUT; t+=2)); do
-    s="$(curl -s "$CONNECT_URL/connectors/$name/status" | states || true)"
+    s="$(curl -sf "$CONNECT_URL/connectors/$name/status" | states || true)"
     if [[ "$s" == *FAILED* ]]; then break; fi
     if [[ -n "$s" ]] && (( $(wc -w <<<"$s") >= 2 )) \
        && [[ ! "$s" =~ (PAUSED|UNASSIGNED|RESTARTING) ]]; then break; fi
@@ -184,7 +193,7 @@ cmd_status() {
   printf '%-22s %-10s %s\n' "NAME" "CONNECTOR" "TASKS"
   while read -r n; do
     [[ -z "$n" ]] && continue
-    s="$(curl -s "$CONNECT_URL/connectors/$n/status" | states || true)"
+    s="$(curl -sf "$CONNECT_URL/connectors/$n/status" | states || true)"
     conn="${s%% *}"
     if [[ "$s" == *" "* ]]; then tasks="${s#* }"; else tasks="(нет задач)"; fi
     printf '%-22s %-10s %s\n' "$n" "$conn" "$tasks"
