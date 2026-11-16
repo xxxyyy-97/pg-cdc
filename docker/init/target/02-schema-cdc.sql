@@ -1,0 +1,2 @@
+CREATE SCHEMA cdc;
+GRANT USAGE ON SCHEMA cdc TO loader;

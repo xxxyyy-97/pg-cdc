@@ -1,0 +1,1 @@
+CREATE ROLE loader WITH LOGIN PASSWORD 'loader';
