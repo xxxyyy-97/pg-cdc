@@ -74,6 +74,7 @@ docker compose up -d --build
 cd ..
 ./register.sh                   # создаст оба коннектора и дождётся RUNNING
 ```
+Запустите `./register.sh h` и посмотрите описание [docs/REGISTER.md](docs/REGISTER.md), чтоб узнать о расширенных возможностях скрипта.
 
 Проверка снапшота:
 
@@ -81,6 +82,9 @@ cd ..
 cd docker
 docker compose exec target psql -U postgres -d dwh -c \
 "SELECT hist_id, op, op_raw, id, amount, status FROM cdc.orders_hist ORDER BY hist_id;"
+
+# или
+./register.sh trg
 ```
 
 Ожидаемо две строки `op='R'`, `op_raw='r'` — начальный снапшот.
@@ -244,4 +248,4 @@ cd .. && ./register.sh          # обязательный шаг после -v
 Confluent JDBC Connector распространяется под Confluent Community License,
 Debezium — под Apache 2.0.
 
-[notes](NOTES.md)
+[notes](docs/NOTES.md)
