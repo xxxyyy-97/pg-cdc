@@ -88,7 +88,7 @@ wait_running() {
     s="$(curl -sf "$CONNECT_URL/connectors/$name/status" | states || true)"
     if [[ "$s" == *FAILED* ]]; then break; fi
     if [[ -n "$s" ]] && (( $(wc -w <<<"$s") >= 2 )) \
-       && [[ ! "$s" =~ (PAUSED|UNASSIGNED|RESTARTING) ]]; then break; fi
+       && [[ ! "$s" =~ (PAUSED|UNASSIGNED|RESTARTING|UNKNOWN) ]]; then break; fi
     sleep 2
   done
   echo "$s"
