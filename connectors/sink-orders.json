@@ -10,8 +10,9 @@
     "connection.password": "loader",
     "table.name.format": "orders_hist",
 
-    "insert.mode": "insert",
-    "pk.mode": "none",
+    "insert.mode": "upsert",
+    "pk.mode": "record_value",
+    "pk.fields": "kafka_partition,kafka_offset",
     "delete.enabled": "false",
     "auto.create": "false",
     "auto.evolve": "false",
@@ -21,14 +22,14 @@
 
     "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
     "transforms.unwrap.delete.tombstone.handling.mode": "rewrite",
-    "transforms.unwrap.add.fields": "op,source.lsn,source.ts_ms",
+    "transforms.unwrap.add.fields": "op,source.lsn,source.ts_ms,source.txId",
 
     "transforms.meta.type": "org.apache.kafka.connect.transforms.InsertField$Value",
     "transforms.meta.offset.field": "kafka_offset",
     "transforms.meta.partition.field": "kafka_partition",
 
     "transforms.rename.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
-    "transforms.rename.renames": "__op:op_raw,__source_lsn:src_lsn,__source_ts_ms:commit_ts_ms,__deleted:is_deleted",
+    "transforms.rename.renames": "__op:op_raw,__source_lsn:src_lsn,__source_ts_ms:commit_ts_ms,__source_txId:src_xid,__deleted:is_deleted",
 
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
     "value.converter.schemas.enable": "true"
