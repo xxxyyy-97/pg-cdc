@@ -1,0 +1,69 @@
+version: "1.0"
+project:
+  title: тестовый проект cdc
+  path: ~/projects/pg-cdc
+  docs: docs
+  items:
+    - item: project_tree
+      render: 99
+      file: PROJECT_TREE.md
+      description: >
+        в этом файле сохранена структура проекта pg-cdc.
+      content:
+        - cmd: tree
+          args:
+            - flag: a
+            - flag: I
+              value: '.git'
+          title: Особенности структуры
+
+    - item: infrastructure
+      render: 10
+      file: INFRASTRUCTURE.md
+      description: |
+        в этом файле раскрыта инфраструктура проекта.
+        расположение файлов и общую структуру можно уточнить в файле PROJECT_TREE.md
+      content:
+        - cmd: cat
+          args: docker/docker-compose.yml
+          title: Описание docker-compose.yml
+        - cmd: cat
+          args: docker/connect/Dockerfile
+          title: Описание oбраза debezium
+        - cmd: awk
+          args: 
+            - 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1'
+            - docker/init/source/*
+          title: Настройка источника pg-source
+        - cmd: awk
+          args: 
+            - 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1'
+            - docker/init/target/*
+          title: Настройка приемника pg-target
+        - cmd: cat
+          args: docker/.env.example
+          title: Шаблон переменных окружения. Переименуйте в .env и подставьте нужные значения
+
+    - item: debezium
+      render: 20
+      file: DEBEZIUM.md
+      description: |
+        В этом файле описаны debezium-коннекторы.
+      content:
+        - cmd: cat
+          args: connectors/01-source-orders.json
+          title: producer таблицы orders в источнике
+        - cmd: cat
+          args: connectors/02-sink-orders.json
+          title: consumer таблицы orders_hist в приемнике
+          
+    - item: artefact
+      render: 30
+      file: ARTEFACTS.md
+      description: |
+        в этом файле приведены атрtфакты проекта cdc.
+        расположение файлов и общую структуру можно уточнить в файле PROJECT_TREE.md
+      content:
+        - cmd: cat
+          args: connectors/register.sh
+          title: Скрипт управления debezium-коннекторами. см. описание в (REGISTER.md)[REGISTER.md]

@@ -43,26 +43,32 @@ Docker + Compose v2, ~4 ГБ RAM для Docker, `curl`, `jq` **или** `python3
 ## Структура
 
 ```text
-pg-cdc/
+tree -a -I '.git' pg-cdc
+pg-cdc
+├── .gitignore
 ├── README.md
-├── connectors/
-│   ├── sink-orders.json                    # JDBC sink (append-only)
-│   └── source-orders.json                  # Debezium PostgreSQL source
-├── docker/
+├── connectors
+│   ├── 01-source-orders.json
+│   ├── 02-sink-orders.json
+│   └── register.sh
+├── docker
 │   ├── .env
-│   ├── connect/                            # базовый образ + JDBC-плагины
+│   ├── .env.example
+│   ├── connect
 │   │   └── Dockerfile
 │   ├── docker-compose.yml
-│   └── init/
-│       ├── source/                         # таблица, publication, replica identity, роль
+│   └── init
+│       ├── source
 │       │   ├── 01-role-debezium.sql
 │       │   └── 02-table-orders.sql
-│       └── target/                         # журнал, PK, вьюхи, роль                       
+│       └── target
 │           ├── 01-role-loader.sql
 │           ├── 02-schema-cdc.sql
 │           ├── 03-table-orders_hist.sql
 │           └── 04-views.sql
-└── register.sh                             # идемпотентная регистрация коннекторов
+└── docs
+    ├── NOTES.md
+    └── REGISTER.md
 ```
 > Все команды `docker compose` ниже выполняются из каталога `docker/`.
 
