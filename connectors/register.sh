@@ -7,8 +7,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONNECT_URL="${CONNECT_URL:-http://localhost:8083}"
-CONNECTORS_DIR="${CONNECTORS_DIR:-$SCRIPT_DIR/connectors}"
-COMPOSE_FILE="${COMPOSE_FILE:-$SCRIPT_DIR/docker/docker-compose.yml}"
+# CONNECTORS_DIR="${CONNECTORS_DIR:-$SCRIPT_DIR/connectors}"
+CONNECTORS_DIR="${CONNECTORS_DIR:-$SCRIPT_DIR}"
+COMPOSE_FILE="${COMPOSE_FILE:-$SCRIPT_DIR/../docker/docker-compose.yml}"
 WAIT_TIMEOUT="${WAIT_TIMEOUT:-180}"
 SOURCE_SVC="${SOURCE_SVC:-source}"; SOURCE_DB="${SOURCE_DB:-app}"
 TARGET_SVC="${TARGET_SVC:-target}"; TARGET_DB="${TARGET_DB:-dwh}"
