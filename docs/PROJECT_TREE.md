@@ -5,6 +5,10 @@ descripton:
 
 ----------
 
+## Блок
+
+Из листинга удалена папка **.git**.
+
 ## Особенности структуры
 
 ```bash
@@ -32,7 +36,6 @@ tree -a -I .git
 │           ├── 03-table-orders_hist.sql
 │           └── 04-views.sql
 └── docs
-    ├── ARTEFACTS.md
     ├── DEBEZIUM.md
     ├── INFRASTRUCTURE.md
     ├── NOTES.md
@@ -40,5 +43,5 @@ tree -a -I .git
     ├── REGISTER.md
     └── docs.yml
 
-8 directories, 22 files
+8 directories, 21 files
 ```

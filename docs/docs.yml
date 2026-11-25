@@ -10,6 +10,9 @@ project:
       description: >
         в этом файле сохранена структура проекта pg-cdc.
       content:
+        - type: text
+          body: |
+            Из листинга удалена папка **.git**.
         - cmd: tree
           args:
             - flag: a
@@ -40,6 +43,11 @@ project:
             - 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1'
             - docker/init/target/*
           title: Настройка приемника pg-target
+        - type: alert
+          alert: WARNING
+          body: |
+            Файл docker/.env содержит секреты.
+            В репозитории хранится только .env.example.
         - cmd: cat
           args: docker/.env.example
           title: Шаблон переменных окружения. Переименуйте в .env и подставьте нужные значения
@@ -57,13 +65,27 @@ project:
           args: connectors/02-sink-orders.json
           title: consumer таблицы orders_hist в приемнике
           
-    - item: artefact
+    - item: register
       render: 30
-      file: ARTEFACTS.md
-      description: |
-        в этом файле приведены атрtфакты проекта cdc.
-        расположение файлов и общую структуру можно уточнить в файле PROJECT_TREE.md
-      content:
-        - cmd: cat
-          args: connectors/register.sh
-          title: Скрипт управления debezium-коннекторами. см. описание в (REGISTER.md)[REGISTER.md]
+      file: REGISTER.md
+      description: Описание работы скрипта register.sh
+      content:       
+        - type: table
+          title: что может register.sh
+          title_level: 3
+          headers: ["Команда", "Действие"]
+          rows:
+            - ['`./register.sh`', 'как раньше: все коннекторы + ожидание RUNNING']
+            - ['`./register.sh reg sink-orders`', 'один коннектор; принимает имя файла, *.json или имя коннектора']
+            - ['`./register.sh del pg-orders-sink`', 'DELETE; для source дополнительно напомнит про осиротевший слот']
+            - ['`./register.sh del all -y`', 'снести все без подтверждения']
+            - ['`./register.sh st`', 'таблица NAME / CONNECTOR / TASKS']
+            - ['`./register.sh st pg-orders-sink`', 'полный JSON со trace — то, что нужно при FAILED']
+            - ['`./register.sh src`', 'строки public.orders']
+            - ['`./register.sh src slots`', 'слоты + объём удержанного WAL']
+            - ['`./register.sh trg`', 'последние 30 записей журнала']
+            - ['`./register.sh trg current`', 'актуальное состояние (DISTINCT ON, без удалённых)']
+            - ['`./register.sh trg dup`', 'total vs uniq — контроль идемпотентности']
+            - ['`./register.sh trg lag`', 'лаг доставки по последним 20']
+            - ['`./register.sh trg "SELECT …"`', 'произвольный SQL']
+            - ['`./register.sh h`', 'справка']      
