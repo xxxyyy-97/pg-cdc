@@ -34,11 +34,13 @@ project:
           args: docker/connect/Dockerfile
           title: Описание oбраза debezium
         - cmd: awk
+          lang: sql
           args: 
             - 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1'
             - docker/init/source/*
           title: Настройка источника pg-source
         - cmd: awk
+          lang: sql
           args: 
             - 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1'
             - docker/init/target/*

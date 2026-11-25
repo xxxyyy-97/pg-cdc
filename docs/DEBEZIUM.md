@@ -9,6 +9,8 @@ descripton:
 
 ```bash
 cat connectors/01-source-orders.json
+```
+```json
 {
   "name": "pg-orders-source",
   "config": {
@@ -37,6 +39,8 @@ cat connectors/01-source-orders.json
 
 ```bash
 cat connectors/02-sink-orders.json
+```
+```json
 {
   "name": "pg-orders-sink",
   "config": {

@@ -13,6 +13,8 @@ descripton:
 
 ```bash
 tree -a -I .git
+```
+```bash
 .
 ├── .gitignore
 ├── README.md

@@ -10,6 +10,8 @@ descripton:
 
 ```bash
 cat docker/docker-compose.yml
+```
+```yaml
 name: pg-cdc
 
 services:
@@ -119,6 +121,8 @@ volumes:
 
 ```bash
 cat docker/connect/Dockerfile
+```
+```dockerfile
 FROM alpine:3.20 AS fetch
 RUN apk add --no-cache curl unzip
 ARG JDBC_VERSION=10.7.4
@@ -138,6 +142,8 @@ COPY --from=fetch /tmp/postgresql.jar   /kafka/connect/kafka-connect-jdbc/
 
 ```bash
 awk 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1' 'docker/init/source/*'
+```
+```sql
 
 ==> docker/init/source/01-role-debezium.sql <==
 
@@ -171,6 +177,8 @@ VALUES (1, 100, 500.00, 'new'), (2, 100, 250.50, 'new');
 
 ```bash
 awk 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1' 'docker/init/target/*'
+```
+```sql
 
 ==> docker/init/target/01-role-loader.sql <==
 
@@ -245,6 +253,8 @@ WHERE rn = 1 AND op <> 'D';
 
 ```bash
 cat docker/.env.example
+```
+```bash
 SOURCE_DB_USER=postgres
 SOURCE_DB_PASSWORD=postgres
 SOURCE_DB_NAME=app
