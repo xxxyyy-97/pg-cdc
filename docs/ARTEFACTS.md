@@ -6,7 +6,7 @@ descripton:
 
 ----------
 
-## Скрипт управления debezium-коннекторами. см. описание в (REGISTER.md)[REGISTER.md]
+## Скрипт управления debezium-коннекторами. см. описание в [REGISTER.md](REGISTER.md)
 
 ```bash
 cat connectors/register.sh
