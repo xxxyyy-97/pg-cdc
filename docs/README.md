@@ -20,8 +20,9 @@ Change Data Capture на базе PostgreSQL, Kafka и Debezium.
 | --- | --- |
 | [INFRASTRUCTURE.md](./INFRASTRUCTURE.md) | в этом файле раскрыта инфраструктура проекта. |
 | [DEBEZIUM.md](./DEBEZIUM.md) | В этом файле описаны debezium-коннекторы. |
+| [JOURNAL.md](./JOURNAL.md) | Журнал cdc.orders_hist: смысл полей, выбор версии строки, готовые запросы. DDL журнала — в INFRAS... |
 | [REGISTER.md](./REGISTER.md) | Описание работы скрипта register.sh |
 | [PROJECT_TREE.md](./PROJECT_TREE.md) | в этом файле сохранена структура проекта pg-cdc. |
 
 ---
-*Последняя генерация: 2026-11-26 17:36*
+*Последняя генерация: 2026-11-26 22:06*

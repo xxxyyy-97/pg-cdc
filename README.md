@@ -231,4 +231,4 @@ cd .. && ./register.sh          # обязательный шаг после -v
 Confluent JDBC Connector распространяется под Confluent Community License,
 Debezium — под Apache 2.0.
 
-[notes](docs/NOTES.md)
+[notes](NOTES.md)

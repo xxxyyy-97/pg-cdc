@@ -13,7 +13,9 @@ tree -a -I .git
 ```bash
 .
 ├── .gitignore
+├── NOTES.md
 ├── README.md
+├── README_backup.md
 ├── connectors
 │   ├── 01-source-orders.json
 │   ├── 02-sink-orders.json
@@ -36,13 +38,13 @@ tree -a -I .git
 └── docs
     ├── DEBEZIUM.md
     ├── INFRASTRUCTURE.md
-    ├── NOTES.md
+    ├── JOURNAL.md
     ├── PROJECT_TREE.md
     ├── README.md
     ├── REGISTER.md
     └── docs.yml
 
-8 directories, 22 files
+8 directories, 24 files
 ```
 
 Из листинга удалена папка **.git**.
