@@ -27,7 +27,7 @@ project:
           args:
             - flag: a
             - flag: I
-              value: '.git'
+              value: '.git|depricate'
           title: Особенности структуры
         - type: text
           body: |

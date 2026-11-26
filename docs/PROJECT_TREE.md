@@ -8,14 +8,12 @@ descripton:
 ## Особенности структуры
 
 ```bash
-tree -a -I .git
+tree -a -I '.git|depricate'
 ```
 ```bash
 .
 ├── .gitignore
-├── NOTES.md
 ├── README.md
-├── README_backup.md
 ├── connectors
 │   ├── 01-source-orders.json
 │   ├── 02-sink-orders.json
@@ -44,7 +42,7 @@ tree -a -I .git
     ├── REGISTER.md
     └── docs.yml
 
-8 directories, 24 files
+8 directories, 22 files
 ```
 
 Из листинга удалена папка **.git**.
