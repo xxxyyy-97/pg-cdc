@@ -25,4 +25,4 @@ Change Data Capture на базе PostgreSQL, Kafka и Debezium.
 | [PROJECT_TREE.md](./PROJECT_TREE.md) | в этом файле сохранена структура проекта pg-cdc. |
 
 ---
-*Последняя генерация: 2026-11-26 22:06*
+*Последняя генерация: 2026-11-26 22:16*

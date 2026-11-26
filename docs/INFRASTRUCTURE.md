@@ -5,6 +5,16 @@ descripton:
 
 ----------
 
+## Состав стенда
+
+| Сервис | Образ | Порт на хосте | Назначение |
+| --- | --- | --- | --- |
+| kafka | confluentinc/cp-kafka:7.7.1 | 29092 | KRaft, 1 брокер, RF=1 |
+| connect | сборка на базе quay.io/debezium/connect:3.0.0.Final | 8083 | Kafka Connect REST |
+| source | postgres:17 | 5433 | источник, БД app |
+| target | postgres:17 | 5434 | приёмник, БД dwh |
+| kafka-ui | provectuslabs/kafka-ui | 8080 | просмотр топиков и коннекторов |
+
 ## Описание docker-compose.yml
 
 ```bash

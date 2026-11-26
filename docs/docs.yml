@@ -39,6 +39,15 @@ project:
       description: |
         в этом файле раскрыта инфраструктура проекта.
       content:
+        - type: table
+          title: Состав стенда
+          headers: ["Сервис", "Образ", "Порт на хосте", "Назначение"]
+          rows:
+            - ["kafka", "confluentinc/cp-kafka:7.7.1", "29092", "KRaft, 1 брокер, RF=1"]
+            - ["connect", "сборка на базе quay.io/debezium/connect:3.0.0.Final", "8083", "Kafka Connect REST"]
+            - ["source", "postgres:17", "5433", "источник, БД app"]
+            - ["target", "postgres:17", "5434", "приёмник, БД dwh"]
+            - ["kafka-ui", "provectuslabs/kafka-ui", "8080", "просмотр топиков и коннекторов"]
         - cmd: cat
           args: docker/docker-compose.yml
           title: Описание docker-compose.yml
@@ -65,7 +74,6 @@ project:
         - cmd: cat
           args: docker/.env.example
           title: Шаблон переменных окружения. Переименуйте в .env и подставьте нужные значения
-
     - item: debezium
       render: 20
       file: DEBEZIUM.md
