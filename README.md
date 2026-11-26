@@ -35,45 +35,22 @@ pg-source (wal_level=logical, publication dbz_pub, REPLICA IDENTITY FULL)
 
 Учётки демо-стенда: `postgres/postgres` (суперюзер), `debezium/dbz` (репликация),
 `loader/loader` (запись в приёмник). **Это не продакшн-конфигурация.**
+Детальное описание стенда смотрите в [INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md)
 
 ## Требования
 
 Docker + Compose v2, ~4 ГБ RAM для Docker, `curl`, `jq` **или** `python3`.
 
 ## Структура
+Структура проекта описана в [PROJECT_TREE.md](docs/PROJECT_TREE.md)
 
-```text
-tree -a -I '.git' pg-cdc
-pg-cdc
-├── .gitignore
-├── README.md
-├── connectors
-│   ├── 01-source-orders.json
-│   ├── 02-sink-orders.json
-│   └── register.sh
-├── docker
-│   ├── .env
-│   ├── .env.example
-│   ├── connect
-│   │   └── Dockerfile
-│   ├── docker-compose.yml
-│   └── init
-│       ├── source
-│       │   ├── 01-role-debezium.sql
-│       │   └── 02-table-orders.sql
-│       └── target
-│           ├── 01-role-loader.sql
-│           ├── 02-schema-cdc.sql
-│           ├── 03-table-orders_hist.sql
-│           └── 04-views.sql
-└── docs
-    ├── NOTES.md
-    └── REGISTER.md
-```
-> Все команды `docker compose` ниже выполняются из каталога `docker/`.
+## Debezium-коннекторы
+Debezium-коннекторы описаны в [DEBEZIUM.md](docs/DEBEZIUM.md)
+
+
 
 ## Быстрый старт
-
+> Все команды `docker compose` ниже выполняются из каталога `docker/`.
 ```bash
 cd docker
 docker compose up -d --build

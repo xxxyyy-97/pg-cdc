@@ -3,6 +3,19 @@ project:
   title: тестовый проект cdc
   path: ~/projects/pg-cdc
   docs: docs
+  readme:
+    title: Архитектура и инфраструктура pg-cdc
+    intro: |
+      Этот набор документов предоставляет полный технический контекст системы 
+      Change Data Capture на базе PostgreSQL, Kafka и Debezium.
+      
+      Используйте его как источник истины при работе с LLM-агентами. 
+    warning: |
+      Все файлы в этом каталоге сгенерированы автоматически.
+      Не редактируйте их вручную!
+    columns:
+      - file
+      - description
   items:
     - item: project_tree
       render: 99
@@ -25,7 +38,6 @@ project:
       file: INFRASTRUCTURE.md
       description: |
         в этом файле раскрыта инфраструктура проекта.
-        расположение файлов и общую структуру можно уточнить в файле PROJECT_TREE.md
       content:
         - cmd: cat
           args: docker/docker-compose.yml

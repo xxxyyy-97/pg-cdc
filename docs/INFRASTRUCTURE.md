@@ -1,7 +1,6 @@
 path: ~/projects/pg-cdc/docs/INFRASTRUCTURE.md
 descripton:
 в этом файле раскрыта инфраструктура проекта.
-расположение файлов и общую структуру можно уточнить в файле PROJECT_TREE.md
 
 
 ----------

@@ -38,10 +38,11 @@ tree -a -I .git
     ├── INFRASTRUCTURE.md
     ├── NOTES.md
     ├── PROJECT_TREE.md
+    ├── README.md
     ├── REGISTER.md
     └── docs.yml
 
-8 directories, 21 files
+8 directories, 22 files
 ```
 
 Из листинга удалена папка **.git**.
