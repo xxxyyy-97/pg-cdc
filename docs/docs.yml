@@ -10,15 +10,15 @@ project:
       description: >
         в этом файле сохранена структура проекта pg-cdc.
       content:
-        - type: text
-          body: |
-            Из листинга удалена папка **.git**.
         - cmd: tree
           args:
             - flag: a
             - flag: I
               value: '.git'
           title: Особенности структуры
+        - type: text
+          body: |
+            Из листинга удалена папка **.git**.
 
     - item: infrastructure
       render: 10
