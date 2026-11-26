@@ -17,3 +17,7 @@ data/
 .DS_Store
 .idea/
 .vscode/
+
+# черновики
+NOTES.md
+README_backup.md
