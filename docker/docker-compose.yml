@@ -51,6 +51,12 @@ services:
       CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
       CONNECT_PLUGIN_PATH: /kafka/connect
       KAFKA_HEAP_OPTS: "-Xms512m -Xmx1g"
+      CONNECT_CONFIG_PROVIDERS: env
+      CONNECT_CONFIG_PROVIDERS_ENV_CLASS: org.apache.kafka.common.config.provider.EnvVarConfigProvider
+      SOURCE_DEBEZIUM_USER: ${SOURCE_DEBEZIUM_USER}
+      SOURCE_DEBEZIUM_PASSWORD: ${SOURCE_DEBEZIUM_PASSWORD}
+      TARGET_DEBEZIUM_USER: ${TARGET_DEBEZIUM_USER}
+      TARGET_DEBEZIUM_PASSWORD: ${TARGET_DEBEZIUM_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8083/connector-plugins >/dev/null"]
       interval: 10s
@@ -65,6 +71,8 @@ services:
       POSTGRES_USER: ${SOURCE_DB_USER}
       POSTGRES_PASSWORD: ${SOURCE_DB_PASSWORD}
       POSTGRES_DB: ${SOURCE_DB_NAME}
+      SOURCE_DEBEZIUM_USER: ${SOURCE_DEBEZIUM_USER}
+      SOURCE_DEBEZIUM_PASSWORD: ${SOURCE_DEBEZIUM_PASSWORD}
     ports: ["${SOURCE_DB_PORT}:5432"]
     volumes:
       - ./init/source:/docker-entrypoint-initdb.d
@@ -81,6 +89,8 @@ services:
       POSTGRES_USER: ${TARGET_DB_USER}
       POSTGRES_PASSWORD: ${TARGET_DB_PASSWORD}
       POSTGRES_DB: ${TARGET_DB_NAME}
+      TARGET_DEBEZIUM_USER: ${TARGET_DEBEZIUM_USER}
+      TARGET_DEBEZIUM_PASSWORD: ${TARGET_DEBEZIUM_PASSWORD}
     ports: ["${TARGET_DB_PORT}:5432"]
     volumes:
       - ./init/target:/docker-entrypoint-initdb.d
