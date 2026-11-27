@@ -51,6 +51,8 @@ metadata:
   name: "pg-orders-sink"
   labels:
     kafka.jikkou.io/connect-cluster: "local"
+  # annotations:
+  #   jikkou.io/delete: true        # ← маркер удаления
 spec:
   connectorClass: "io.confluent.connect.jdbc.JdbcSinkConnector"
   tasksMax: 1

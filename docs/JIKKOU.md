@@ -51,7 +51,7 @@ Alias jikkou = docker compose run --rm jikkou (запускать из docker/).
 | `jikkou get kafkaconnect connectors --name pg-orders-sink` | один коннектор |
 | `jikkou get kafkaconnect connectors -o JSON` | для скриптов |
 | `jikkou health get kafkaconnect` | здоровье воркера: UP/DOWN, версия, kafkaClusterId |
-| `curl -s 'localhost:8083/connectors?expand=status' \| jq ...` | фактический RUNNING/FAILED коннекторов и задач (URL в кавычках — zsh!) |
+| `curl -s 'localhost:8083/connectors?expand=status' \| jq \\<br> 'to_entries[] \| {name: .key, connector: .value.status.connector.state, tasks: [.value.status.tasks[].state]}'...` | фактический RUNNING/FAILED коннекторов и задач (URL в кавычках — zsh!) |
 | `curl -s 'localhost:8083/connectors/pg-orders-sink/status' \| jq` | полный JSON с trace при FAILED |
 | `jikkou action kafkaconnectrestartconnectors execute --only-failed --include-tasks` | альтернатива curl: возвращает статус в ответе + перезапускает упавшее |
 
