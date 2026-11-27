@@ -8,74 +8,82 @@ descripton:
 ## producer таблицы orders в источнике
 
 ```bash
-cat connectors/01-source-orders.json
+cat connectors/pg-orders-source.yaml
 ```
-```json
-{
-  "name": "pg-orders-source",
-  "config": {
-    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
-    "plugin.name": "pgoutput",
-    "database.hostname": "source",
-    "database.port": "5432",
-    "database.user": "debezium",
-    "database.password": "dbz",
-    "database.dbname": "app",
-    "topic.prefix": "app",
-    "table.include.list": "public.orders",
-    "slot.name": "dbz_orders_slot",
-    "publication.name": "dbz_pub",
-    "publication.autocreate.mode": "disabled",
-    "snapshot.mode": "initial",
-    "decimal.handling.mode": "precise",
-    "tombstones.on.delete": "false",
-    "heartbeat.interval.ms": "10000",
-    "tasks.max": "1"
-  }
-}
+```yaml
+apiVersion: "kafka.jikkou.io/v1" 
+kind: "KafkaConnector"
+metadata:
+  name: "pg-orders-source"
+  labels:
+    kafka.jikkou.io/connect-cluster: "local"   # имя из application.conf
+spec:
+  connectorClass: "io.debezium.connector.postgresql.PostgresConnector"
+  tasksMax: 1
+  state: "RUNNING"
+  config:
+    plugin.name: "pgoutput"
+    database.hostname: "source"
+    database.port: "5432"
+    database.user: "debezium"
+    database.password: "dbz"
+    database.dbname: "app"
+    topic.prefix: "app"
+    table.include.list: "public.orders"
+    slot.name: "dbz_orders_slot"
+    publication.name: "dbz_pub"
+    publication.autocreate.mode: "disabled"
+    snapshot.mode: "initial"
+    decimal.handling.mode: "precise"
+    tombstones.on.delete: "false"
+    heartbeat.interval.ms: "10000"
 ```
 
 ## consumer таблицы orders_hist в приемнике
 
 ```bash
-cat connectors/02-sink-orders.json
+cat connectors/pg-orders-sink.yaml
 ```
-```json
-{
-  "name": "pg-orders-sink",
-  "config": {
-    "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
-    "tasks.max": "1",
-    "topics": "app.public.orders",
+```yaml
+apiVersion: "kafka.jikkou.io/v1"
+kind: "KafkaConnector"
+metadata:
+  name: "pg-orders-sink"
+  labels:
+    kafka.jikkou.io/connect-cluster: "local"
+spec:
+  connectorClass: "io.confluent.connect.jdbc.JdbcSinkConnector"
+  tasksMax: 1
+  state: "RUNNING"
+  config:
+    topics: "app.public.orders"
 
-    "connection.url": "jdbc:postgresql://target:5432/dwh?stringtype=unspecified&currentSchema=cdc",
-    "connection.user": "loader",
-    "connection.password": "loader",
-    "table.name.format": "orders_hist",
+    connection.url: "jdbc:postgresql://target:5432/dwh?stringtype=unspecified&currentSchema=cdc"
+    connection.user: "loader"
+    connection.password: "loader"
+    table.name.format: "orders_hist"
 
-    "insert.mode": "upsert",
-    "pk.mode": "record_value",
-    "pk.fields": "kafka_partition,kafka_offset",
-    "delete.enabled": "false",
-    "auto.create": "false",
-    "auto.evolve": "false",
-    "batch.size": "1000",
+    insert.mode: "upsert"
+    pk.mode: "record_value"
+    pk.fields: "kafka_partition,kafka_offset"
+    delete.enabled: "false"
+    auto.create: "false"
+    auto.evolve: "false"
+    batch.size: "1000"
 
-    "transforms": "unwrap,meta,rename",
+    transforms: "unwrap,meta,rename"
 
-    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
-    "transforms.unwrap.delete.tombstone.handling.mode": "rewrite",
-    "transforms.unwrap.add.fields": "op,source.lsn,source.ts_ms,source.txId",
+    transforms.unwrap.type: "io.debezium.transforms.ExtractNewRecordState"
+    transforms.unwrap.delete.tombstone.handling.mode: "rewrite"
+    transforms.unwrap.add.fields: "op,source.lsn,source.ts_ms,source.txId"
 
-    "transforms.meta.type": "org.apache.kafka.connect.transforms.InsertField$Value",
-    "transforms.meta.offset.field": "kafka_offset",
-    "transforms.meta.partition.field": "kafka_partition",
+    transforms.meta.type: "org.apache.kafka.connect.transforms.InsertField$Value"
+    transforms.meta.offset.field: "kafka_offset"
+    transforms.meta.partition.field: "kafka_partition"
 
-    "transforms.rename.type": "org.apache.kafka.connect.transforms.ReplaceField$Value",
-    "transforms.rename.renames": "__op:op_raw,__source_lsn:src_lsn,__source_ts_ms:commit_ts_ms,__source_txId:src_xid,__deleted:is_deleted",
+    transforms.rename.type: "org.apache.kafka.connect.transforms.ReplaceField$Value"
+    transforms.rename.renames: "__op:op_raw,__source_lsn:src_lsn,__source_ts_ms:commit_ts_ms,__source_txId:src_xid,__deleted:is_deleted"
 
-    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-    "value.converter.schemas.enable": "true"
-  }
-}
+    value.converter: "org.apache.kafka.connect.json.JsonConverter"
+    value.converter.schemas.enable: "true"
 ```

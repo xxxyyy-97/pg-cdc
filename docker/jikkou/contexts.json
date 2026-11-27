@@ -1,0 +1,7 @@
+{
+  "currentContext": "local",
+  "local": {
+    "configFile": "/work/application.conf",
+    "configProps": {}
+  }
+}

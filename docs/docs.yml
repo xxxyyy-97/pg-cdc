@@ -81,10 +81,10 @@ project:
         В этом файле описаны debezium-коннекторы.
       content:
         - cmd: cat
-          args: connectors/01-source-orders.json
+          args: connectors/pg-orders-source.yaml
           title: producer таблицы orders в источнике
         - cmd: cat
-          args: connectors/02-sink-orders.json
+          args: connectors/pg-orders-sink.yaml
           title: consumer таблицы orders_hist в приемнике
 
     - item: journal
@@ -124,89 +124,91 @@ project:
             - ["updated_at", "❌ бизнес-поле, может не меняться"]
             - ["op / op_raw / is_deleted", "✅ для отсева удалённых, но не для сортировки"]
         - type: text
-          title: Базовый запрос — актуальное состояние
+          title: Дополнительные запросы и шпаргалки
           body: |
-            ```sql
-            SELECT id, customer_id, amount, status, updated_at,
-                   op, src_lsn, src_xid, commit_ts_ms, kafka_offset
-            FROM (
-                SELECT DISTINCT ON (id) *
-                FROM cdc.orders_hist
-                ORDER BY id,
-                         src_lsn DESC NULLS LAST,   -- порядок источника
-                         kafka_offset DESC          -- тай-брейкер
-            ) last
-            WHERE op <> 'D';                        -- ← фильтр СНАРУЖИ
-            ```
-            Готовая view: `cdc.v_orders_current` (см. DDL в INFRASTRUCTURE.md).
-        - type: text
-          title: Шпаргалка запросов
-          body: |
-            ```sql
-            -- порядок событий источника
-            ORDER BY kafka_partition, kafka_offset
+            [add_journal.md](static/add_journal.md)
 
-            -- история одной сущности
-            SELECT op, amount, status, commit_ts FROM cdc.v_orders_hist
-            WHERE id = 3 ORDER BY src_lsn, kafka_offset;
-
-            -- все изменения одной транзакции
-            SELECT * FROM cdc.orders_hist
-            WHERE src_xid = 762 AND commit_ts_ms = 1794854604156;
-
-            -- состояние на момент времени (time travel)
-            SELECT DISTINCT ON (id) id, amount, status, op
-            FROM cdc.v_orders_hist
-            WHERE commit_ts <= '2026-11-16 19:36:00+03'
-            ORDER BY id, src_lsn DESC, kafka_offset DESC;
-            -- затем отфильтровать op <> 'D'
-
-            -- только реальные DML, без снапшота
-            WHERE op_raw <> 'r'
-
-            -- время коммита и лаг доставки
-            SELECT hist_id, op,
-                   to_timestamp(commit_ts_ms/1000.0)             AS commit_ts,
-                   loaded_at - to_timestamp(commit_ts_ms/1000.0) AS delivery_lag
-            FROM cdc.orders_hist;
-
-            -- LSN в привычном виде X/YYYY
-            SELECT pg_lsn '0/0' + src_lsn FROM cdc.orders_hist;
-
-            -- контроль идемпотентности
-            SELECT count(*) AS total,
-                   count(DISTINCT (kafka_partition, kafka_offset)) AS uniq
-            FROM cdc.orders_hist;
-
-            -- сверка полноты журнала с источником
-            SELECT count(*) FROM cdc.v_orders_current;  -- vs SELECT count(*) FROM orders на источнике
-            ```
-            Индекс под эти запросы:
-            ```sql
-            CREATE INDEX orders_hist_id_lsn_idx
-                ON cdc.orders_hist (id, src_lsn DESC, kafka_offset DESC);
-            ```
-    - item: register
+    - item: jikkou
       render: 30
-      file: REGISTER.md
-      description: Описание работы скрипта register.sh
-      content:       
+      file: JIKKOU.md
+      description: |
+        Управление debezium-коннекторами через jikkou (GitOps).
+        Манифесты: connectors/*.yaml. Конфиг: docker/jikkou/application.conf.
+        Alias jikkou = docker compose run --rm jikkou (запускать из docker/).
+      content:
+        - type: text
+          body: |
+            Принцип: **источник истины — YAML в Git**. Любое изменение = правка манифеста → diff → apply.
+            Руками через REST/UI ничего не меняем — jikkou увидит это как дрейф.
         - type: table
-          title: что может register.sh
+          title: Жизненный цикл коннекторов
           title_level: 3
           headers: ["Команда", "Действие"]
           rows:
-            - ['`./register.sh`', 'как раньше: все коннекторы + ожидание RUNNING']
-            - ['`./register.sh reg sink-orders`', 'один коннектор; принимает имя файла, *.json или имя коннектора']
-            - ['`./register.sh del pg-orders-sink`', 'DELETE; для source дополнительно напомнит про осиротевший слот']
-            - ['`./register.sh del all -y`', 'снести все без подтверждения']
-            - ['`./register.sh st`', 'таблица NAME / CONNECTOR / TASKS']
-            - ['`./register.sh st pg-orders-sink`', 'полный JSON со trace — то, что нужно при FAILED']
-            - ['`./register.sh src`', 'строки public.orders']
-            - ['`./register.sh src slots`', 'слоты + объём удержанного WAL']
-            - ['`./register.sh trg`', 'последние 30 записей журнала']
-            - ['`./register.sh trg current`', 'актуальное состояние (DISTINCT ON, без удалённых)']
-            - ['`./register.sh trg dup`', 'total vs uniq — контроль идемпотентности']
-            - ['`./register.sh trg lag`', 'лаг доставки по последним 20']
-            - ['`./register.sh trg "SELECT …"`', 'произвольный SQL']
-            - ['`./register.sh h`', 'справка']      
+            - ['`jikkou diff --files connectors/`', 'превью изменений против РЕАЛЬНОГО кластера; ничего не трогает']
+            - ['`jikkou apply --files connectors/`', 'FULL reconcile: создаст, обновит, удалит помеченные; идемпотентен (повтор → ok: N, altered: 0)']
+            - ["`jikkou apply --files connectors/ -s 'metadata.name IN (pg-orders-sink)'`", 'точечно один коннектор из директории']
+            - ['`jikkou apply --files connectors/ --dry-run`', 'то же, что diff, но в формате результата apply']
+            - ['`jikkou create --files connectors/`', 'только CREATE, существующие не трогает']
+            - ['`jikkou update --files connectors/`', 'CREATE + UPDATE, без удалений']
+            - ['`jikkou replace --files connectors/pg-orders-sink.yaml`', 'DELETE + CREATE заново; для source может запустить новый снапшот']
+            - ['`jikkou validate --files connectors/`', 'проверка манифестов до похода в кластер: name, label connect-cluster, connectorClass, tasksMax']
+        - type: table
+          title: Пауза / остановка / запуск
+          title_level: 3
+          headers: ["Действие", "Как"]
+          rows:
+            - ['Поставить на паузу', '`spec.state: PAUSED` в манифесте → `jikkou apply`']
+            - ['Остановить (конфиг сохраняется)', '`spec.state: STOPPED` → `jikkou apply`']
+            - ['Вернуть в работу', '`spec.state: RUNNING` → `jikkou apply`']
+            - ['Перезапустить упавшие инстансы и задачи', '`jikkou action kafkaconnectrestartconnectors execute --only-failed --include-tasks`']
+            - ['Перезапустить конкретный коннектор целиком', '`jikkou action kafkaconnectrestartconnectors execute --connector-name pg-orders-sink --include-tasks`']
+        - type: alert
+          alert: IMPORTANT
+          title: Удаление — только через аннотацию
+          body: |
+            Просто удалить YAML и сделать apply — НЕ сработает: orphan-коннекторы не вычисляются (deleteOrphans=false в KafkaConnectorChangeComputer).
+            Правильный путь:
+            1. Добавить в манифест `metadata.annotations["jikkou.io/delete"]: true`
+            2. `jikkou delete --files connectors/pg-orders-sink.yaml` (или apply)
+            3. `git rm connectors/pg-orders-sink.yaml`
+            Для source после удаления вручную дропнуть осиротевший слот на pg-source.
+        - type: table
+          title: Наблюдение и статус
+          title_level: 3
+          headers: ["Команда", "Действие"]
+          rows:
+            - ["`jikkou get kafkaconnect connectors`", "список коннекторов + конфиги; spec.state — ЖЕЛАЕМОЕ, не фактическое"]
+            - ["`jikkou get kafkaconnect connectors --name pg-orders-sink`", "один коннектор"]
+            - ["`jikkou get kafkaconnect connectors -o JSON`", "для скриптов"]
+            - ["`jikkou health get kafkaconnect`", "здоровье воркера: UP/DOWN, версия, kafkaClusterId"]
+            - ["`curl -s 'localhost:8083/connectors?expand=status' | jq ...`", "фактический RUNNING/FAILED коннекторов и задач (URL в кавычках — zsh!)"]
+            - ["`curl -s 'localhost:8083/connectors/pg-orders-sink/status' | jq`", "полный JSON с trace при FAILED"]
+            - ['`jikkou action kafkaconnectrestartconnectors execute --only-failed --include-tasks`', 'альтернатива curl: возвращает статус в ответе + перезапускает упавшее']
+        - type: alert
+          alert: WARNING
+          title: Баг версии 1.1.0
+          body: |
+            Флаг `--expand-status` описан в документации, но не работает: KafkaConnectorCollector не переопределяет configProperties(), поэтому опция не регистрируется в CLI.
+            Используйте curl expand=status или action --only-failed для просмотра фактического статуса.
+        - type: table
+          title: Контроль дрейфа и CI
+          title_level: 3
+          headers: ["Команда", "Действие"]
+          rows:
+            - ['`jikkou diff --files connectors/`', 'кто-то поменял конфиг через kafka-ui → видно сразу, без state-файла']
+            - ['`jikkou diff --files connectors/ --fail-on-changes`', 'exit code 3 при любом расхождении; для cron/CI']
+            - ['`jikkou diff --files connectors/ --filter-resource-op CREATE,DELETE`', 'смотреть только нужные операции']
+            - ['`jikkou apply --files connectors/`', 'откатить ручные изменения к состоянию из Git']
+        - type: table
+          title: Интроспекция и шаблоны
+          title_level: 3
+          headers: ["Команда", "Действие"]
+          rows:
+            - ['`jikkou api-providers list`', 'какие провайдеры доступны и включены']
+            - ['`jikkou api-resources`', 'какие ресурсы поддерживает сборка']
+            - ['`jikkou api-extensions`', 'коллекторы, контроллеры, actions']
+            - ['`jikkou config view`', 'merged-конфиг (проверить clusters, url)']
+            - ['`jikkou config current-context`', 'текущий контекст (local)']
+            - ['`jikkou apply --files connectors/orders.tpl --values-files values.yaml`', 'Jinja-шаблон: один манифест × N таблиц/окружений']
+            - ['`jikkou get kafkaconnect connectors -o YAML > current.yaml`', 'экспорт состояния кластера в Git']

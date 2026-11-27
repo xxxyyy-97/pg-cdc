@@ -51,6 +51,11 @@ services:
       CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
       CONNECT_PLUGIN_PATH: /kafka/connect
       KAFKA_HEAP_OPTS: "-Xms512m -Xmx1g"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connector-plugins >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
 
   source:
     image: postgres:17
@@ -96,6 +101,19 @@ services:
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
       DYNAMIC_CONFIG_ENABLED: "true"
+
+  jikkou:
+    image: streamthoughts/jikkou:latest
+    profiles: ["tools"]              # не стартует при обычном up -d
+    depends_on:
+      connect: {condition: service_healthy}
+    environment:
+      JIKKOUCONFIG: /etc/jikkou/contexts.json
+    volumes:
+      - ./jikkou/contexts.json:/etc/jikkou/contexts.json:ro
+      - ./jikkou/application.conf:/work/application.conf:ro
+      - ../connectors:/work/connectors:ro
+    working_dir: /work
 
 volumes:
   kafka-data:
