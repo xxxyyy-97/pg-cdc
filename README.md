@@ -31,7 +31,7 @@ pg-source (wal_level=logical, publication dbz_pub, REPLICA IDENTITY FULL)
 | Сервисы, порты, Dockerfile, SQL-инициализация, .env | [docs/INFRASTRUCTURE.md](docs/INFRASTRUCTURE.md) |
 | Конфиги source/sink коннекторов, SMT-цепочки | [docs/DEBEZIUM.md](docs/DEBEZIUM.md) |
 | Поля журнала, выбор последней версии, готовые запросы | [docs/JOURNAL.md](docs/JOURNAL.md) |
-| Управление коннекторами (`register.sh`) | [docs/REGISTER.md](docs/REGISTER.md) |
+| Управление коннекторами (`jikkou`) | [docs/JIKKOU.md](docs/JIKKOU.md) |
 | Структура репозитория | [docs/PROJECT_TREE.md](docs/PROJECT_TREE.md) |
 
 > [!NOTE]
@@ -45,6 +45,8 @@ Docker + Compose v2, ~4 ГБ RAM для Docker, `curl`, `jq` **или** `python3
 `loader/loader` (запись в приёмник). **Это не продакшн-конфигурация.**
 
 ## Быстрый старт
+> [!WARNING]
+> перед началом работ нужен алиас `alias jikkou='docker compose run --rm jikkou'`
 
 > Все команды `docker compose` выполняются из каталога `docker/`.
 
@@ -54,19 +56,16 @@ docker compose up -d --build
 
 # дождаться воркера и убедиться, что оба плагина на месте
 curl -s localhost:8083/connector-plugins | grep -Eo '"class":"[^"]*(Postgres|JdbcSink)[^"]*"'
-cd ..
 
-./register.sh          # создаст оба коннектора и дождётся RUNNING
+# регистрация коннекторов через jikkou через алиас
+jikkou apply --files connectors/ 
 ```
 
-Расширенные возможности скрипта (`reg`, `del`, `st`, `src`, `trg`…): `./register.sh h`
-и [docs/REGISTER.md](docs/REGISTER.md).
+Расширенные возможности `jikkou`: [docs/JIKKOU.md](docs/JIKKOU.md).
 
 Проверка снапшота:
 
 ```bash
-./register.sh trg
-# или напрямую:
 cd docker && docker compose exec target psql -U postgres -d dwh -c \
 "SELECT hist_id, op, op_raw, id, amount, status FROM cdc.orders_hist ORDER BY hist_id;"
 ```
@@ -77,6 +76,7 @@ cd docker && docker compose exec target psql -U postgres -d dwh -c \
 
 ```bash
 cd docker
+# DML в источнике
 docker compose exec source psql -U postgres -d app -c "
   INSERT INTO orders(id,customer_id,amount,status) VALUES (3,101,777.77,'new');
   UPDATE orders SET amount=999.99, status='paid', updated_at=now() WHERE id=1;
@@ -84,11 +84,13 @@ docker compose exec source psql -U postgres -d app -c "
   UPDATE orders SET status='paid'    WHERE id=3;
   UPDATE orders SET status='shipped' WHERE id=3;
 "
-cd ..
-
-./register.sh trg      # журнал приёмника
-./register.sh trg current   # актуальное состояние
-./register.sh trg dup       # total vs uniq — дублей быть не должно
+# Проверка данных в приемнике
+docker compose exec target psql -U postgres -d dwh -c \
+"SELECT
+    hist_id, id, customer_id, amount, status, updated_at, 
+    commit_ts_ms, loaded_at, op, op_raw, is_deleted, 
+    kafka_partition, kafka_offset, src_lsn, src_xid  
+FROM cdc.orders_hist ORDER BY hist_id;"
 ```
 
 Ожидаемый журнал после первого блока DML:
@@ -131,9 +133,6 @@ docker compose exec source psql -U postgres -d app -c \
  SELECT g,100,g*1.5,'new' FROM generate_series(4000,7000) g;"
 
 docker kill -s KILL connect && docker start connect
-cd ..
-
-./register.sh trg dup    # total == uniq → дублей нет
 ```
 
 > Расхождение по `(src_lsn, id, op_raw)` при этом возможно: Debezium после сбоя перечитывает
@@ -143,11 +142,6 @@ cd ..
 ## Эксплуатация
 
 **Слот держит WAL** — главный риск стенда:
-
-```bash
-./register.sh src slots
-```
-
 Остановленный коннектор → рост WAL на источнике. В проде: алерт на `active=false`
 и `max_slot_wal_keep_size`.
 
@@ -162,8 +156,6 @@ cd ..
 ```bash
 cd docker
 docker compose down -v          # удалит и данные, и конфиги коннекторов
-docker compose up -d
-cd .. && ./register.sh          # обязательный шаг после -v
 ```
 
 `docker compose down` **без** `-v` сохраняет и данные, и коннекторов.
