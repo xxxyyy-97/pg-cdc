@@ -180,3 +180,7 @@ docker compose down -v          # удалит и данные, и конфиг�
 Бинарники коннекторов **не коммитятся** — их тянет `docker/connect/Dockerfile`.
 Confluent JDBC Connector распространяется под Confluent Community License,
 Debezium — под Apache 2.0.
+
+## Credits / Используемые инструменты
+- [Jikkou](https://github.com/streamthoughts/jikkou) (Apache-2.0) — декларативное управление конфигурацией Kafka Connect
+- [Debezium](https://debezium.io) (Apache-2.0) — CDC-коннектор
