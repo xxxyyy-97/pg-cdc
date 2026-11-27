@@ -25,8 +25,8 @@ spec:
     plugin.name: "pgoutput"
     database.hostname: "source"
     database.port: "5432"
-    database.user: "debezium"
-    database.password: "dbz"
+    database.user: "${env:SOURCE_DEBEZIUM_USER}"
+    database.password: "${env:SOURCE_DEBEZIUM_PASSWORD}"
     database.dbname: "app"
     topic.prefix: "app"
     table.include.list: "public.orders"
@@ -61,8 +61,8 @@ spec:
     topics: "app.public.orders"
 
     connection.url: "jdbc:postgresql://target:5432/dwh?stringtype=unspecified&currentSchema=cdc"
-    connection.user: "loader"
-    connection.password: "loader"
+    connection.user: "${env:TARGET_DEBEZIUM_USER}"
+    connection.password: "${env:TARGET_DEBEZIUM_PASSWORD}"
     table.name.format: "orders_hist"
 
     insert.mode: "upsert"

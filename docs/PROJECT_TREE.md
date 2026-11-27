@@ -25,12 +25,12 @@ tree -a -I '.git|depricate'
 │   ├── docker-compose.yml
 │   ├── init
 │   │   ├── source
-│   │   │   ├── 01-role-debezium.sql
-│   │   │   └── 02-table-orders.sql
+│   │   │   ├── 01-role-debezium.sh
+│   │   │   └── 02-table-orders.sh
 │   │   └── target
-│   │       ├── 01-role-loader.sql
-│   │       ├── 02-schema-cdc.sql
-│   │       ├── 03-table-orders_hist.sql
+│   │       ├── 01-role-loader.sh
+│   │       ├── 02-schema-cdc.sh
+│   │       ├── 03-table-orders_hist.sh
 │   │       └── 04-views.sql
 │   └── jikkou
 │       ├── application.conf

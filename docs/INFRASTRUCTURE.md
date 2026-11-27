@@ -74,6 +74,12 @@ services:
       CONNECT_OFFSET_FLUSH_INTERVAL_MS: 10000
       CONNECT_PLUGIN_PATH: /kafka/connect
       KAFKA_HEAP_OPTS: "-Xms512m -Xmx1g"
+      CONNECT_CONFIG_PROVIDERS: env
+      CONNECT_CONFIG_PROVIDERS_ENV_CLASS: org.apache.kafka.common.config.provider.EnvVarConfigProvider
+      SOURCE_DEBEZIUM_USER: ${SOURCE_DEBEZIUM_USER}
+      SOURCE_DEBEZIUM_PASSWORD: ${SOURCE_DEBEZIUM_PASSWORD}
+      TARGET_DEBEZIUM_USER: ${TARGET_DEBEZIUM_USER}
+      TARGET_DEBEZIUM_PASSWORD: ${TARGET_DEBEZIUM_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8083/connector-plugins >/dev/null"]
       interval: 10s
@@ -88,6 +94,8 @@ services:
       POSTGRES_USER: ${SOURCE_DB_USER}
       POSTGRES_PASSWORD: ${SOURCE_DB_PASSWORD}
       POSTGRES_DB: ${SOURCE_DB_NAME}
+      SOURCE_DEBEZIUM_USER: ${SOURCE_DEBEZIUM_USER}
+      SOURCE_DEBEZIUM_PASSWORD: ${SOURCE_DEBEZIUM_PASSWORD}
     ports: ["${SOURCE_DB_PORT}:5432"]
     volumes:
       - ./init/source:/docker-entrypoint-initdb.d
@@ -104,6 +112,8 @@ services:
       POSTGRES_USER: ${TARGET_DB_USER}
       POSTGRES_PASSWORD: ${TARGET_DB_PASSWORD}
       POSTGRES_DB: ${TARGET_DB_NAME}
+      TARGET_DEBEZIUM_USER: ${TARGET_DEBEZIUM_USER}
+      TARGET_DEBEZIUM_PASSWORD: ${TARGET_DEBEZIUM_PASSWORD}
     ports: ["${TARGET_DB_PORT}:5432"]
     volumes:
       - ./init/target:/docker-entrypoint-initdb.d
@@ -172,32 +182,40 @@ awk 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1' 'docker/init/source/*'
 ```
 ```sql
 
-==> docker/init/source/01-role-debezium.sql <==
+==> docker/init/source/01-role-debezium.sh <==
 
-CREATE ROLE debezium WITH LOGIN PASSWORD 'dbz' REPLICATION;
-GRANT CONNECT ON DATABASE app TO debezium;
-GRANT USAGE ON SCHEMA public TO debezium;
+#!/bin/bash
+set -e
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE ROLE ${SOURCE_DEBEZIUM_USER} WITH LOGIN PASSWORD '${SOURCE_DEBEZIUM_PASSWORD}' REPLICATION;
+    GRANT CONNECT ON DATABASE $POSTGRES_DB TO ${SOURCE_DEBEZIUM_USER};
+    GRANT USAGE ON SCHEMA public TO ${SOURCE_DEBEZIUM_USER};
+EOSQL
 
-==> docker/init/source/02-table-orders.sql <==
+==> docker/init/source/02-table-orders.sh <==
 
-CREATE TABLE public.orders (
-    id          bigint PRIMARY KEY,
-    customer_id bigint NOT NULL,
-    amount      numeric(12,2) NOT NULL,
-    status      text NOT NULL,
-    updated_at  timestamptz NOT NULL DEFAULT now()
-);
+#!/bin/bash
+set -e
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE TABLE public.orders (
+        id          bigint PRIMARY KEY,
+        customer_id bigint NOT NULL,
+        amount      numeric(12,2) NOT NULL,
+        status      text NOT NULL,
+        updated_at  timestamptz NOT NULL DEFAULT now()
+    );
 
-GRANT SELECT ON public.orders TO debezium;
+    GRANT SELECT ON public.orders TO ${SOURCE_DEBEZIUM_USER};
 
--- обязательно: иначе в DELETE/UPDATE приедет только PK
-ALTER TABLE public.orders REPLICA IDENTITY FULL;
+    -- обязательно: иначе в DELETE/UPDATE приедет только PK
+    ALTER TABLE public.orders REPLICA IDENTITY FULL;
 
--- publication создаём сами, чтобы не давать debezium права owner'а таблиц
-CREATE PUBLICATION dbz_pub FOR TABLE public.orders;
+    -- publication создаём сами, чтобы не давать debezium права owner'а таблиц
+    CREATE PUBLICATION dbz_pub FOR TABLE public.orders;
 
-INSERT INTO public.orders (id, customer_id, amount, status)
-VALUES (1, 100, 500.00, 'new'), (2, 100, 250.50, 'new');
+    INSERT INTO public.orders (id, customer_id, amount, status)
+    VALUES (1, 100, 500.00, 'new'), (2, 100, 250.50, 'new');
+EOSQL
 ```
 
 ## Настройка приемника pg-target
@@ -207,50 +225,65 @@ awk 'FNR==1 {print "\n==>", FILENAME, "<==\n"} 1' 'docker/init/target/*'
 ```
 ```sql
 
-==> docker/init/target/01-role-loader.sql <==
+==> docker/init/target/01-role-loader.sh <==
 
-CREATE ROLE loader WITH LOGIN PASSWORD 'loader';
+#!/bin/bash
+set -e
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE ROLE ${TARGET_DEBEZIUM_USER} WITH LOGIN PASSWORD '${TARGET_DEBEZIUM_PASSWORD}';
+EOSQL
 
-==> docker/init/target/02-schema-cdc.sql <==
+==> docker/init/target/02-schema-cdc.sh <==
 
-CREATE SCHEMA cdc;
-GRANT USAGE ON SCHEMA cdc TO loader;
+#!/bin/bash
+set -e
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE SCHEMA cdc;
+    GRANT USAGE ON SCHEMA cdc TO ${TARGET_DEBEZIUM_USER};
+EOSQL
 
-==> docker/init/target/03-table-orders_hist.sql <==
+==> docker/init/target/03-table-orders_hist.sh <==
 
-CREATE TABLE cdc.orders_hist (
-    hist_id         bigint GENERATED ALWAYS AS IDENTITY,
+#!/bin/bash
+set -e
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE TABLE cdc.orders_hist (
+        hist_id         bigint GENERATED ALWAYS AS IDENTITY,
 
-    -- метаданные от Debezium (их пишет sink)
-    op_raw          text NOT NULL,        -- c / u / d / r
-    src_lsn         bigint,
-    commit_ts_ms    bigint,
-    is_deleted      boolean,
-    kafka_partition integer NOT NULL, 
-    kafka_offset    bigint NOT NULL, 
-    src_xid bigint,
-    -- бизнес-колонки; nullable, т.к. зависят от replica identity
-    id              bigint NOT NULL,
-    customer_id     bigint,
-    amount          numeric(12,2),
-    status          text,
-    updated_at      timestamptz,
+        -- метаданные от Debezium (их пишет sink)
+        op_raw          text NOT NULL,        -- c / u / d / r
+        src_lsn         bigint,
+        commit_ts_ms    bigint,
+        is_deleted      boolean,
+        kafka_partition integer NOT NULL, 
+        kafka_offset    bigint NOT NULL, 
+        src_xid bigint,
+        -- бизнес-колонки; nullable, т.к. зависят от replica identity
+        id              bigint NOT NULL,
+        customer_id     bigint,
+        amount          numeric(12,2),
+        status          text,
+        updated_at      timestamptz,
 
-    -- ТО САМОЕ ПОЛЕ: insert / update / delete
-    op char(1) GENERATED ALWAYS AS (
-        CASE op_raw 
-          WHEN 'u' THEN 'U'
-          WHEN 'd' THEN 'D'
-          WHEN 'r' THEN 'R'
-          ELSE 'I' END
-    ) STORED,
+        -- ТО САМОЕ ПОЛЕ: insert / update / delete
+        op char(1) GENERATED ALWAYS AS (
+            CASE op_raw 
+              WHEN 'u' THEN 'U'
+              WHEN 'd' THEN 'D'
+              WHEN 'r' THEN 'R'
+              ELSE 'I' END
+        ) STORED,
 
-    loaded_at timestamptz NOT NULL DEFAULT now()
-);
+        loaded_at timestamptz NOT NULL DEFAULT now()
+    );
 
--- CREATE INDEX orders_hist_id_idx ON cdc.orders_hist (id, src_lsn);
-ALTER TABLE cdc.orders_hist ADD PRIMARY KEY (kafka_partition, kafka_offset);
-GRANT SELECT, INSERT, UPDATE ON cdc.orders_hist TO loader;
+    -- CREATE INDEX orders_hist_id_idx ON cdc.orders_hist (id, src_lsn);
+    ALTER TABLE cdc.orders_hist ADD PRIMARY KEY (kafka_partition, kafka_offset);
+    GRANT SELECT, INSERT, UPDATE ON cdc.orders_hist TO ${TARGET_DEBEZIUM_USER};
+EOSQL
+
+
+
 
 
 ==> docker/init/target/04-views.sql <==
@@ -287,10 +320,16 @@ SOURCE_DB_PASSWORD=postgres
 SOURCE_DB_NAME=app
 SOURCE_DB_PORT=5433
 
+SOURCE_DEBEZIUM_USER=debezium
+SOURCE_DEBEZIUM_PASSWORD=dbz
+
 TARGET_DB_USER=postgres
 TARGET_DB_PASSWORD=postgres
 TARGET_DB_NAME=dwh
 TARGET_DB_PORT=5434
+
+TARGET_DEBEZIUM_USER=loader
+TARGET_DEBEZIUM_PASSWORD=loader
 
 KAFKA_CLUSTER_ID=MkU3OEVBNTcwNTJENDM2Qk
 ```
